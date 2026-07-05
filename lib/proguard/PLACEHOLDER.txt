@@ -1,0 +1,1 @@
+Opsional (proguard.jar, proguard.cfg) - hanya dipakai jika ant -Dproguard=1

@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  build.xml — ModBusExtension (MIT App Inventor)
+  ============================================
+  Penggunaan:
+    ant               → build semua (sama dengan: ant extensions)
+    ant clean         → hapus folder build/ dan out/
+    ant extensions    → kompilasi + process + jar + dex + pack → out/com.prayersun.PrayerSunExtension.aix
+    ant extensions -Dproguard=1  → dengan obfuscation ProGuard
+
+  Struktur folder yang diharapkan:
+    lib/ant-contrib/ant-contrib-1.0b3.jar
+    lib/appinventor/AnnotationProcessors.jar
+    lib/appinventor/AndroidRuntime.jar
+    lib/appinventor/Component.jar
+    lib/appinventor/dx.jar
+    lib/proguard/proguard.jar   (opsional, hanya diperlukan jika -Dproguard=1)
+    lib/proguard/proguard.cfg   (opsional)
+    src/com/prayersun/*.java
+
+  Java: dikompilasi dengan source/target 7 (kompatibel Android via dx.jar)
+        Jalankan dengan JDK 8 (OpenJDK Temurin 1.8.x sudah cukup).
+
+  CATATAN PENTING:
+    File SunTracking.java & PrayerSunExtension.java menggunakan java.time
+    (LocalDate/ZonedDateTime/DateTimeFormatter, JSR-310). API ini baru tersedia
+    native mulai Android API 26. Jika target minSdk App Inventor Anda < 26 dan
+    Anda TIDAK memakai library desugaring, kelas tersebut akan crash saat
+    dipanggil di perangkat lama. Solusi:
+      1) Tambahkan library desugaring (mis. lib/deps/threetenabp / desugar_jdk_libs)
+         ke lib/deps/ lalu masukkan ke classpath javac & saat unjar/dex, atau
+      2) Ganti pemakaian java.time di SunTracking.java dengan java.util.Calendar
+         (lebih aman untuk toolchain dx.jar/App Inventor lama).
+-->
+<project name="PrayerSunExtension" default="all">
+
+  <!-- ================================================================
+       Properti direktori
+       ================================================================ -->
+  <property name="src.dir"                    location="src" />
+  <property name="lib.dir"                    location="lib" />
+
+  <property name="Extensions.dir"             location="out" />
+  <property name="AndroidRuntime-classes.dir" location="build/classes" />
+  <property name="ExternalComponent.dir"      location="build/externalComponents" />
+  <property name="ExternalComponent-class.dir"
+                                              location="build/externalComponents-classes" />
+
+  <!-- ================================================================
+       Target: all (default)
+       ================================================================ -->
+  <target name="all" depends="extensions" />
+
+  <!-- ================================================================
+       Target: clean
+       ================================================================ -->
+  <target name="clean">
+    <delete dir="build" />
+    <delete dir="out" />
+    <echo>Direktori build/ dan out/ telah dihapus.</echo>
+  </target>
+
+  <!-- ================================================================
+       Task ant-contrib (diperlukan oleh <foreach>)
+       ================================================================ -->
+  <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+    <classpath>
+      <pathelement location="${lib.dir}/ant-contrib/ant-contrib-1.0b3.jar" />
+    </classpath>
+  </taskdef>
+
+  <!-- ================================================================
+       Target: javac.helpers — kompilasi kelas helper (jika ada)
+       ================================================================ -->
+  <target name="javac.helpers">
+    <mkdir dir="${AndroidRuntime-classes.dir}" />
+    <depend srcdir="${src.dir}" destdir="${AndroidRuntime-classes.dir}">
+      <include name="**/helpers/*.java" />
+    </depend>
+    <!--
+      source/target=7 agar dx.jar bisa memproses bytecode ini.
+      JDK 8 mendukung kompilasi ke target 7 tanpa masalah.
+    -->
+    <javac
+      source="7"
+      target="7"
+      srcdir="${src.dir}"
+      destdir="${AndroidRuntime-classes.dir}"
+      encoding="utf-8"
+      includeantruntime="false"
+    >
+      <classpath>
+        <fileset dir="${lib.dir}/appinventor">
+          <include name="*.jar" />
+        </fileset>
+        <fileset dir="${lib.dir}/deps">
+          <include name="*.jar" />
+        </fileset>
+      </classpath>
+      <include name="**/helpers/*.java" />
+    </javac>
+  </target>
+
+  <!-- ================================================================
+       Target: javac — kompilasi semua source Java
+       ================================================================ -->
+  <target name="javac" depends="javac.helpers">
+    <mkdir dir="${AndroidRuntime-classes.dir}" />
+    <depend srcdir="${src.dir}" destdir="${AndroidRuntime-classes.dir}">
+      <include name="**/*.java" />
+      <exclude name="**/helpers/*.java" />
+      <exclude name="**/Main.java" />
+    </depend>
+    <javac
+      source="7"
+      target="7"
+      srcdir="${src.dir}"
+      destdir="${AndroidRuntime-classes.dir}"
+      encoding="utf-8"
+      includeantruntime="false"
+    >
+      <classpath>
+        <fileset dir="${lib.dir}/appinventor">
+          <include name="*.jar" />
+        </fileset>
+        <fileset dir="${lib.dir}/deps">
+          <include name="*.jar" />
+        </fileset>
+      </classpath>
+      <include name="**/*.java" />
+      <exclude name="**/helpers/*.java" />
+      <exclude name="**/Main.java" />
+    </javac>
+  </target>
+
+  <!-- ================================================================
+       Target: process — jalankan ExternalComponentGenerator
+       (menghasilkan simple_components.json dan folder externalComponents)
+       ================================================================ -->
+  <target name="process" depends="javac">
+    <mkdir dir="${Extensions.dir}" />
+    <mkdir dir="${ExternalComponent.dir}" />
+    <mkdir dir="${ExternalComponent-class.dir}" />
+    <java failonerror="true"
+          classname="com.google.appinventor.components.scripts.ExternalComponentGenerator">
+      <classpath>
+        <pathelement location="${lib.dir}/appinventor/AnnotationProcessors.jar" />
+      </classpath>
+      <!-- simple_components.json -->
+      <arg path="${AndroidRuntime-classes.dir}/simple_components.json" />
+      <!-- simple_components_build_info.json -->
+      <arg path="${AndroidRuntime-classes.dir}/simple_components_build_info.json" />
+      <!-- output dir externalComponents -->
+      <arg path="${ExternalComponent.dir}" />
+      <!-- compiled classes dir -->
+      <arg path="${AndroidRuntime-classes.dir}" />
+      <!-- deps dir -->
+      <arg path="${lib.dir}/deps" />
+      <!-- externalComponents-classes dir -->
+      <arg path="${ExternalComponent-class.dir}" />
+      <!-- usePlatformVersion: false -->
+      <arg value="false" />
+    </java>
+  </target>
+
+  <!-- ================================================================
+       Target: unjarAllExtensionLibraries
+       Ekstrak isi .jar library agar bisa di-dex bersama kelas extension.
+       ================================================================ -->
+  <target name="unjarAllExtensionLibraries">
+    <foreach target="unjarExtensionLibraries" param="extension" inheritall="true">
+      <path>
+        <dirset dir="${ExternalComponent-class.dir}">
+          <include name="*" />
+        </dirset>
+      </path>
+    </foreach>
+  </target>
+
+  <target name="unjarExtensionLibraries">
+    <basename property="extensionClassFolder" file="${extension}" />
+    <unzip dest="${ExternalComponent-class.dir}/${extensionClassFolder}">
+      <fileset dir="${ExternalComponent-class.dir}/${extensionClassFolder}">
+        <include name="**/*.jar" />
+      </fileset>
+    </unzip>
+  </target>
+
+  <!-- ================================================================
+       Target: jarAllExtensions — buat .jar untuk setiap extension
+       ================================================================ -->
+  <target name="jarAllExtensions" depends="process,unjarAllExtensionLibraries">
+    <foreach target="jarExtension" param="extension" inheritall="true">
+      <path>
+        <dirset dir="${ExternalComponent-class.dir}">
+          <include name="*" />
+        </dirset>
+      </path>
+    </foreach>
+  </target>
+
+  <target name="jarExtension">
+    <basename property="extensionClassFolder" file="${extension}" />
+    <jar destfile="${ExternalComponent-class.dir}/${extensionClassFolder}.jar"
+         basedir="${ExternalComponent-class.dir}/${extensionClassFolder}"
+         includes="**/*.class"
+         excludes="*.jar" />
+    <antcall target="ProGuard">
+      <param name="extensionClassFolder" value="${extensionClassFolder}" />
+    </antcall>
+    <copy file="${ExternalComponent-class.dir}/${extensionClassFolder}.jar"
+          tofile="${ExternalComponent.dir}/${extensionClassFolder}/files/AndroidRuntime.jar" />
+    <echo>Generated AndroidRuntime.jar [${extensionClassFolder}]</echo>
+  </target>
+
+  <!-- ================================================================
+       Target: dexAllExtensions — buat classes.dex untuk setiap extension
+       ================================================================ -->
+  <target name="dexAllExtensions" depends="jarAllExtensions">
+    <foreach target="dexExtension" param="extension">
+      <path>
+        <fileset dir="${ExternalComponent-class.dir}">
+          <include name="*.jar" />
+        </fileset>
+      </path>
+    </foreach>
+  </target>
+
+  <target name="dexExtension">
+    <basename property="extensionType" file="${extension}" suffix=".jar" />
+    <java jar="${lib.dir}/appinventor/dx.jar"
+          fork="true"
+          failonerror="true">
+      <arg value="--dex" />
+      <arg value="--no-strict" />
+      <arg value="--output" />
+      <arg value="${ExternalComponent.dir}/${extensionType}/classes.jar" />
+      <arg value="${ExternalComponent-class.dir}/${extensionType}.jar" />
+    </java>
+    <echo>Dexing extension: ${extensionType}</echo>
+  </target>
+
+  <!-- ================================================================
+       Target: extensions — kemas setiap extension menjadi .aix
+       ================================================================ -->
+  <target name="packExtension">
+    <basename property="extensionType" file="${extension}" />
+    <zip destfile="${Extensions.dir}/${extensionType}.aix"
+         basedir="${ExternalComponent.dir}"
+         includes="${extensionType}/" />
+    <echo>Packed: ${Extensions.dir}/${extensionType}.aix</echo>
+  </target>
+
+  <target name="extensions" depends="jarAllExtensions,dexAllExtensions">
+    <mkdir dir="${Extensions.dir}" />
+    <foreach target="packExtension" param="extension" inheritall="true">
+      <path>
+        <dirset dir="${ExternalComponent.dir}">
+          <include name="*" />
+        </dirset>
+      </path>
+    </foreach>
+  </target>
+
+  <!-- ================================================================
+       Target: ProGuard (opsional, jalankan dengan -Dproguard=1)
+       ================================================================ -->
+  <condition property="skipProguard">
+    <not>
+      <equals arg1="${proguard}" arg2="1" />
+    </not>
+  </condition>
+
+  <target name="ProGuard" unless="skipProguard">
+    <taskdef resource="proguard/ant/task.properties"
+             classpath="${lib.dir}/proguard/proguard.jar" />
+    <proguard printmapping="${Extensions.dir}/${extensionClassFolder}-proguard.map"
+              overloadaggressively="on"
+              configuration="${lib.dir}/proguard/proguard.cfg"
+              ignorewarnings="false">
+      <injar  file="${ExternalComponent-class.dir}/${extensionClassFolder}.jar" />
+      <outjar file="${ExternalComponent-class.dir}/${extensionClassFolder}_p.jar" />
+      <libraryjar>
+        <fileset dir="${lib.dir}">
+          <include name="**/*.jar" />
+          <include name="**/*.aar" />
+          <exclude name="*/dx.jar" />
+          <exclude name="*/apksigner.jar" />
+        </fileset>
+      </libraryjar>
+      <dontnote filter="proguard.configuration.ConfigurationLogger" />
+      <adaptresourcefilecontents filter="proguard/ant/task.properties" />
+    </proguard>
+    <delete file="${ExternalComponent-class.dir}/${extensionClassFolder}.jar" />
+    <move   file="${ExternalComponent-class.dir}/${extensionClassFolder}_p.jar"
+            tofile="${ExternalComponent-class.dir}/${extensionClassFolder}.jar" />
+  </target>
+
+</project>

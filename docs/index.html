@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ModbusExtension — Dokumentasi Ekstensi MIT App Inventor</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg-deep:#12181A;
+    --bg-panel:#1A2224;
+    --bg-panel-2:#20292B;
+    --line:#2E3A3C;
+    --text-hi:#ECE8DF;
+    --text-mid:#A7B3AE;
+    --text-dim:#748480;
+    --copper:#C97D3C;
+    --copper-soft:#E3A46B;
+    --amber:#E8A33D;
+    --teal:#4FB8A6;
+  }
+  *{box-sizing:border-box;}
+  html, body{ margin:0; padding:0; }
+  html{scroll-behavior:smooth;}
+  html, body{ overflow-x:hidden; width:100%; max-width:100%; }
+  img{ max-width:100%; height:auto; display:block; }
+  /* Grid/flex items default to min-width:auto (=content's max-content size),
+     which lets a wide image blow out the whole layout. Force them to shrink. */
+  .grid > *, .flex > *{ min-width:0; }
+  body{
+    background-color:var(--bg-deep);
+    background-image:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(201,125,60,0.10), transparent),
+      radial-gradient(ellipse 900px 500px at 100% 0%, rgba(79,184,166,0.07), transparent),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    color:var(--text-hi);
+    font-family:'IBM Plex Sans', sans-serif;
+  }
+  h1,h2,h3, .brand, .nav-link{font-family:'Space Grotesk', sans-serif;}
+  code, pre, .mono, .terminal-id, .pin{font-family:'IBM Plex Mono', monospace;}
+
+  /* --- signature: terminal-strip nav --- */
+  .terminal-strip{
+    display:flex; gap:2px; padding:6px; border-radius:10px;
+    background:linear-gradient(180deg, #262F31, #1A2224);
+    border:1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .terminal-strip a{
+    position:relative;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:8px 12px 6px; border-radius:6px; text-decoration:none;
+    color:var(--text-mid); font-size:11px; letter-spacing:.04em;
+    transition:color .15s ease;
+  }
+  .terminal-strip a:hover{color:var(--text-hi);}
+  .screw{
+    width:9px; height:9px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, var(--copper-soft), var(--copper) 60%, #7a4a24 100%);
+    box-shadow:0 0 0 2px rgba(0,0,0,0.25), 0 0 6px rgba(201,125,60,0.5);
+  }
+  .terminal-strip a:hover .screw{ box-shadow:0 0 0 2px rgba(0,0,0,0.25), 0 0 10px rgba(232,163,61,0.9); }
+
+  /* --- signal line (hero signature) --- */
+  .signal-line{ position:relative; height:2px; background:var(--line); border-radius:2px; overflow:hidden; }
+  .signal-line::before{
+    content:''; position:absolute; top:0; left:-30%; width:30%; height:100%;
+    background:linear-gradient(90deg, transparent, var(--teal), transparent);
+    animation:travel 2.8s linear infinite;
+  }
+  @keyframes travel{ from{left:-30%;} to{left:100%;} }
+
+  .panel{ background:var(--bg-panel); border:1px solid var(--line); border-radius:12px; min-width:0; overflow-wrap:break-word; box-shadow:0 2px 8px rgba(0,0,0,0.25); }
+  .panel-2{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; min-width:0; }
+
+  /* nameplate texture for cards */
+  .nameplate{
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%);
+  }
+
+  .term-card{
+    border-left:3px solid var(--line);
+    transition:border-color .15s ease, transform .1s ease;
+    min-width:0; overflow-wrap:break-word; word-break:break-word;
+  }
+  .term-card:hover{ transform:translateY(-1px); }
+  .term-card.kind-rw{ border-left-color:var(--copper); }
+  .term-card.kind-ro{ border-left-color:var(--amber); }
+  .term-card.kind-event{ border-left-color:var(--teal); }
+  .term-card.kind-method{ border-left-color:var(--copper); }
+
+  /* Plain-CSS grid (not a Tailwind-generated utility) so card spacing is
+     correct on the very first paint, regardless of when/whether the
+     Tailwind CDN runtime script finishes injecting its utility classes. */
+  .cards-grid{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap:1.25rem;
+  }
+  @media (min-width:640px){
+    .cards-grid{ grid-template-columns: repeat(2, 1fr); gap:1.5rem; }
+  }
+  @media (min-width:1024px){
+    .cards-grid{ grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .warning-banner{
+    background:linear-gradient(180deg, rgba(232,163,61,0.10), rgba(232,163,61,0.04));
+    border:1px solid rgba(232,163,61,0.35);
+    border-left:3px solid var(--amber);
+    border-radius:10px;
+  }
+
+  .dot{ width:7px; height:7px; border-radius:50%; display:inline-block; }
+  .dot-rw{ background:var(--copper); }
+  .dot-ro{ background:var(--amber); }
+  .dot-event{ background:var(--teal); }
+  .dot-method{ background:var(--copper-soft); }
+
+  .type-badge{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.02em;
+    padding:2px 7px; border-radius:4px; border:1px solid var(--line); color:var(--text-mid);
+  }
+
+  .tab-btn{
+    padding:8px 16px; border-radius:8px; font-size:13.5px; color:var(--text-mid);
+    border:1px solid transparent; cursor:pointer; font-weight:500;
+  }
+  .tab-btn.active{ background:var(--bg-panel-2); color:var(--text-hi); border-color:var(--line); }
+
+  .block-frame{
+    background:#0F1416; border:1px solid var(--line); border-radius:8px; padding:10px;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px;
+    min-height:64px; overflow:hidden; width:100%; min-width:0;
+  }
+  .block-frame img{
+    max-width:100%; width:auto; height:auto; flex-shrink:1;
+    image-rendering:-webkit-optimize-contrast;
+  }
+  .block-fallback{ color:var(--text-dim); font-size:11px; font-family:'IBM Plex Mono',monospace; text-align:center; padding:8px;}
+
+  a.btn-copper{
+    background:linear-gradient(180deg, var(--copper-soft), var(--copper));
+    color:#1A1006; font-weight:600;
+    box-shadow:0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(201,125,60,0.25);
+  }
+  a.btn-copper:hover{ filter:brightness(1.06); }
+
+  .rivet{ width:5px; height:5px; border-radius:50%; background:#3a4547; box-shadow:inset 0 1px 1px rgba(0,0,0,0.5); }
+
+  pre{ overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+  pre code.hljs{ padding:14px !important; background:#0F1416 !important; }
+
+  /* --- hazard banner --- */
+  .hazard-banner{
+    background:
+      repeating-linear-gradient(135deg,
+        rgba(232,163,61,0.14) 0px, rgba(232,163,61,0.14) 10px,
+        transparent 10px, transparent 20px),
+      #1E1712;
+    border-top:1px solid rgba(232,163,61,0.35);
+    border-bottom:1px solid rgba(232,163,61,0.35);
+    margin-top:14px;
+  }
+  header.site-header{ margin-bottom:14px; }
+  /* Plain-CSS gap for button rows so spacing between adjacent buttons/links
+     is correct on first paint, independent of Tailwind CDN runtime timing. */
+  .btn-row{
+    display:flex; flex-wrap:wrap; gap:12px; margin-bottom:2rem;
+  }
+  /* Plain-CSS vertical spacing for the block-preview panel and the tab
+     row, so gaps above/below them are correct on first paint. */
+  .block-preview{ margin-bottom:1.5rem; }
+  .tabs-row{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin-top:4px; margin-bottom:1.5rem;
+  }
+
+  /* Plain-CSS page wrapper: guarantees horizontal padding on first paint,
+     independent of whether the Tailwind CDN runtime has injected its
+     px-4/sm:px-6/lg:px-8 utilities yet. */
+  .wrap{
+    max-width:72rem; margin-left:auto; margin-right:auto;
+    padding-left:16px; padding-right:16px;
+  }
+  @media (min-width:640px){ .wrap{ padding-left:24px; padding-right:24px; } }
+  @media (min-width:1024px){ .wrap{ padding-left:32px; padding-right:32px; } }
+  .hazard-icon{
+    width:30px; height:30px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    border-radius:6px; background:rgba(232,163,61,0.15); border:1px solid rgba(232,163,61,0.4);
+    color:var(--amber);
+  }
+
+  ::selection{ background:rgba(79,184,166,0.35); }
+  .scrollbar-industrial::-webkit-scrollbar{height:6px;}
+  .scrollbar-industrial::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+</style>
+</head>
+<body class="antialiased">
+
+<!-- ======================= HEADER / NAV ======================= -->
+<header class="site-header sticky top-0 z-50 backdrop-blur bg-[#12181A]/90 border-b border-[var(--line)]">
+  <div class="wrap py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2 shrink-0">
+      <div class="rivet hidden sm:block"></div>
+      <span class="brand text-[14px] sm:text-[15px] font-semibold tracking-tight whitespace-nowrap">Modbus<span style="color:var(--copper-soft)">Extension</span></span>
+      <span class="hidden lg:inline-block ml-2 type-badge">MIT App Inventor</span>
+    </div>
+
+    <nav class="terminal-strip overflow-x-auto scrollbar-industrial flex-1 min-w-0 justify-center sm:justify-start">
+      <a href="#pendahuluan" class="whitespace-nowrap"><span class="screw"></span>01 · Pendahuluan</a>
+      <a href="#komponen" class="whitespace-nowrap"><span class="screw"></span>02 · Komponen</a>
+      <a href="#kode" class="whitespace-nowrap"><span class="screw"></span>03 · Contoh Blok</a>
+      <a href="#fitur" class="whitespace-nowrap"><span class="screw"></span>04 · Fitur</a>
+      <a href="#catatan" class="whitespace-nowrap"><span class="screw"></span>05 · Catatan</a>
+    </nav>
+
+    <a href="https://github.com/" target="_blank" rel="noopener"
+       class="hidden md:inline-flex items-center gap-2 btn-copper px-4 py-2 rounded-lg text-sm shrink-0">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Repo GitHub
+    </a>
+  </div>
+</header>
+
+<!-- ======================= BANNER PERINGATAN ======================= -->
+<div class="hazard-banner my-3">
+  <div class="wrap py-3 flex items-start gap-3">
+    <div class="hazard-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+    </div>
+    <p class="text-[12.5px] sm:text-[13px] text-[var(--text-mid)] leading-relaxed pt-1">
+      <b class="text-[var(--amber)]">Catatan pengujian:</b> fitur pada ekstensi ini belum sepenuhnya diuji pada semua perangkat, karena keterbatasan hardware dan software yang tersedia saat pengembangan (variasi chipset USB-to-serial, versi Android, serta merk/tipe PLC atau slave Modbus). Lakukan pengujian menyeluruh terlebih dahulu sebelum dipakai di lingkungan produksi.
+    </p>
+  </div>
+</div>
+
+<!-- ======================= HERO ======================= -->
+<section class="wrap pt-10 sm:pt-14 pb-10">
+  <div class="flex flex-col lg:flex-row gap-8 lg:gap-10 items-start">
+    <div class="flex-1 min-w-0 w-full">
+      <div class="flex items-center gap-2 mb-4 type-badge inline-flex"><span class="dot dot-event"></span> Connectivity · Non-visible component</div>
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-semibold leading-[1.15] sm:leading-[1.05] tracking-tight mb-4">
+        Kendalikan perangkat Modbus<br>
+        <span style="color:var(--copper-soft)">langsung dari App Inventor.</span>
+      </h1>
+      <p class="text-[var(--text-mid)] text-[14.5px] sm:text-[15px] leading-relaxed max-w-xl mb-6">
+        <span class="mono text-[var(--text-hi)]">ModbusExtension</span> adalah komponen non-visible untuk MIT App Inventor yang menjadikan aplikasi Android sebagai <b class="text-[var(--text-hi)]">Modbus master (client)</b>. Baca dan tulis coil / register ke PLC, modul I/O, sensor industri, atau mikrokontroler — lewat Wi-Fi/Ethernet (Modbus TCP) maupun adapter USB-to-serial (Modbus RTU) — tanpa menulis satu baris kode Java/Kotlin.
+      </p>
+      <div class="btn-row">
+        <a href="https://github.com/" target="_blank" rel="noopener" class="btn-copper px-5 py-2.5 rounded-lg text-sm inline-flex items-center gap-2">
+          Lihat Source di GitHub →
+        </a>
+        <a href="#komponen" class="panel-2 px-5 py-2.5 rounded-lg text-sm text-[var(--text-mid)] hover:text-[var(--text-hi)]">Jelajahi Komponen</a>
+      </div>
+      <div class="signal-line w-full max-w-xl mb-2"></div>
+      <p class="text-[11px] text-[var(--text-dim)] mono">TX/RX · Modbus TCP (port 502) — Modbus RTU (CH340 / CP210x / FTDI / PL2303 / CDC-ACM)</p>
+    </div>
+
+    <div class="panel nameplate p-5 w-full lg:w-[340px] lg:shrink-0">
+      <p class="type-badge mb-3 inline-block">Spesifikasi Ringkas</p>
+      <dl class="text-sm space-y-2.5">
+        <div class="flex justify-between gap-3 border-b border-[var(--line)] pb-2"><dt class="text-[var(--text-dim)]">Nama</dt><dd class="mono text-right">ModbusExtension</dd></div>
+        <div class="flex justify-between gap-3 border-b border-[var(--line)] pb-2"><dt class="text-[var(--text-dim)]">Kategori</dt><dd class="mono text-right">CONNECTIVITY</dd></div>
+        <div class="flex justify-between gap-3 border-b border-[var(--line)] pb-2"><dt class="text-[var(--text-dim)]">Min. SDK</dt><dd class="mono text-right">7</dd></div>
+        <div class="flex justify-between gap-3 border-b border-[var(--line)] pb-2"><dt class="text-[var(--text-dim)]">Versi</dt><dd class="mono text-right">1.0</dd></div>
+        <div class="flex justify-between gap-3"><dt class="text-[var(--text-dim)]">Tipe koneksi</dt><dd class="mono text-right">TCP · RTU (USB)</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= PENDAHULUAN ======================= -->
+<section id="pendahuluan" class="wrap py-14 border-t border-[var(--line)]">
+  <h2 class="text-2xl font-semibold mb-5 flex items-center gap-3"><span class="screw"></span>Pendahuluan</h2>
+  <div class="grid md:grid-cols-3 gap-5">
+    <div class="panel p-5 md:col-span-2">
+      <p class="text-[var(--text-mid)] text-[14.5px] leading-relaxed mb-3">
+        <b class="text-[var(--text-hi)]">Modbus</b> adalah protokol komunikasi serial/industri yang menggunakan pola <i>master–slave</i>: satu perangkat master mengirim permintaan (request), dan satu atau beberapa perangkat slave membalas (response). Protokol ini banyak dipakai pada PLC, modul I/O jarak jauh, meter listrik, VFD (inverter motor), dan berbagai sensor industri karena sederhana dan sudah menjadi standar de-facto sejak tahun 1979.
+      </p>
+      <p class="text-[var(--text-mid)] text-[14.5px] leading-relaxed mb-3">
+        ModbusExtension menempatkan ponsel/tablet Android sebagai <b class="text-[var(--text-hi)]">master</b>. Ada dua jalur komunikasi yang didukung:
+      </p>
+      <ul class="text-[14.5px] text-[var(--text-mid)] space-y-2 list-none">
+        <li class="flex gap-2"><span class="dot dot-rw mt-1.5"></span><span><b class="text-[var(--text-hi)]">Modbus TCP</b> — lewat Wi-Fi atau Ethernet (via adapter), menghubungi <span class="mono">host:port</span> perangkat/gateway secara langsung.</span></li>
+        <li class="flex gap-2"><span class="dot dot-ro mt-1.5"></span><span><b class="text-[var(--text-hi)]">Modbus RTU</b> — lewat adapter USB-to-serial (CH340, CP210x, FTDI, PL2303, CDC-ACM) yang tersambung ke port OTG Android, umum dipakai untuk RS-232/RS-485.</span></li>
+      </ul>
+    </div>
+    <div class="panel p-5">
+      <p class="type-badge mb-3 inline-block">Cocok dipakai untuk</p>
+      <ul class="text-[13.5px] text-[var(--text-mid)] space-y-2">
+        <li>• Aplikasi monitoring/HMI mobile untuk mesin produksi</li>
+        <li>• Dashboard SCADA ringan berbasis Android</li>
+        <li>• Alat bantu commissioning & troubleshooting lapangan</li>
+        <li>• Proyek edukasi otomasi industri & IoT</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= KOMPONEN ======================= -->
+<section id="komponen" class="wrap py-14 border-t border-[var(--line)]">
+  <h2 class="text-2xl font-semibold mb-2 flex items-center gap-3"><span class="screw"></span>Pengenalan Komponen</h2>
+  <p class="text-[var(--text-mid)] text-[14px] mb-6 max-w-2xl">Setiap blok ditampilkan berikut gambar block, tipe nilai, dan keterangan fungsinya — persis seperti tampilan di Blocks Editor App Inventor.</p>
+
+  <div class="panel block-preview p-4 flex flex-col sm:flex-row items-center gap-4">
+    <div class="block-frame sm:w-auto sm:max-w-[240px]"><img src="images/get_ModbusExtension.png" alt="get_ModbusExtension.png" loading="lazy"></div>
+    <p class="text-[12.5px] text-[var(--text-mid)] leading-relaxed">Saat komponen <span class="mono text-[var(--text-hi)]">ModbusExtension1</span> ditambahkan ke Screen, App Inventor otomatis menyediakan blok referensi ini — dipakai untuk mengoper komponen sebagai nilai (misalnya ke prosedur kustom).</p>
+  </div>
+
+  <div class="tabs-row" id="tabs">
+    <button class="tab-btn active" data-tab="properties">Properties (6)</button>
+    <button class="tab-btn" data-tab="events">Events (8)</button>
+    <button class="tab-btn" data-tab="methods">Methods (13)</button>
+  </div>
+
+  <div id="properties-grid" class="cards-grid"></div>
+  <div id="events-grid" class="cards-grid" style="display:none"></div>
+  <div id="methods-grid" class="cards-grid" style="display:none"></div>
+</section>
+
+<!-- ======================= CONTOH BLOK / PSEUDOCODE ======================= -->
+<section id="kode" class="wrap py-14 border-t border-[var(--line)]">
+  <h2 class="text-2xl font-semibold mb-2 flex items-center gap-3"><span class="screw"></span>Contoh Pseudo-code Blok</h2>
+  <p class="text-[var(--text-mid)] text-[14px] mb-6 max-w-2xl">Notasi berikut merepresentasikan susunan blok di Blocks Editor secara tekstual, untuk memudahkan membaca alur logika tanpa perlu screenshot per kombinasi blok.</p>
+
+  <div class="grid md:grid-cols-2 gap-5">
+    <div class="panel p-5">
+      <p class="type-badge mb-3 inline-block">1 · Konek TCP saat Screen dibuka</p>
+      <pre class="rounded-lg text-[12.5px] leading-relaxed"><code class="language-plaintext">when Screen1.Initialize do
+  set ModbusExtension1.SlaveId to 1
+  set ModbusExtension1.ResponseTimeout to 1000
+  call ModbusExtension1.ConnectTcp
+    host: "192.168.1.50"
+    port: 502
+
+when ModbusExtension1.Connected do
+  call ModbusExtension1.ReadHoldingRegisters
+    startAddress: 0
+    count: 10
+    unsigned: true</code></pre>
+    </div>
+
+    <div class="panel p-5">
+      <p class="type-badge mb-3 inline-block">2 · Menampilkan hasil pembacaan register</p>
+      <pre class="rounded-lg text-[12.5px] leading-relaxed"><code class="language-plaintext">when ModbusExtension1.GotRegisters(values) do
+  set Label_Suhu.Text to
+    select list item list values index 1
+  set Label_Tekanan.Text to
+    select list item list values index 2
+
+when ModbusExtension1.OperationError(operation, message) do
+  set Label_Status.Text to
+    join "Gagal: " operation " - " message</code></pre>
+    </div>
+
+    <div class="panel p-5">
+      <p class="type-badge mb-3 inline-block">3 · Menulis nilai dari tombol (Write Coil)</p>
+      <pre class="rounded-lg text-[12.5px] leading-relaxed"><code class="language-plaintext">when Button_Pompa.Click do
+  call ModbusExtension1.WriteCoil
+    address: 5
+    value: true
+
+when ModbusExtension1.WriteCompleted(operation, success, errorMessage) do
+  if success then
+    set Label_Status.Text to "Pompa ON"
+  else
+    set Label_Status.Text to
+      join "Gagal tulis: " errorMessage</code></pre>
+    </div>
+
+    <div class="panel p-5">
+      <p class="type-badge mb-3 inline-block">4 · Modbus RTU via USB serial</p>
+      <pre class="rounded-lg text-[12.5px] leading-relaxed"><code class="language-plaintext">when Button_Sambung.Click do
+  call ModbusExtension1.RequestUsbPermission
+
+when ModbusExtension1.UsbPermissionGranted(deviceName) do
+  call ModbusExtension1.ConnectRtu
+    baudRate: 9600
+    dataBits: 8
+    stopBits: 1
+    parity: 0
+
+when ModbusExtension1.UsbPermissionDenied do
+  set Label_Status.Text to "Izin USB ditolak"</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= FITUR & KEGUNAAN ======================= -->
+<section id="fitur" class="wrap py-14 border-t border-[var(--line)]">
+  <h2 class="text-2xl font-semibold mb-2 flex items-center gap-3"><span class="screw"></span>Fitur & Kegunaan</h2>
+  <p class="text-[var(--text-mid)] text-[14px] mb-6 max-w-2xl">Karena Modbus adalah standar terbuka, ekstensi ini bisa dipasangkan dengan berbagai perangkat selama perangkat tersebut mengimplementasikan Modbus TCP/RTU sebagai slave.</p>
+
+  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="panel p-5">
+      <p class="mono text-[13px] mb-2" style="color:var(--copper-soft)">ESP8266 / ESP32</p>
+      <p class="text-[13.5px] text-[var(--text-mid)] leading-relaxed">Firmware Modbus TCP slave (mis. via library ModbusIP/ModbusRTU) menjembatani sensor ke Wi-Fi. Aplikasi App Inventor tinggal ConnectTcp ke IP modul.</p>
+    </div>
+    <div class="panel p-5">
+      <p class="mono text-[13px] mb-2" style="color:var(--copper-soft)">AVR (Arduino Uno/Mega)</p>
+      <p class="text-[13.5px] text-[var(--text-mid)] leading-relaxed">Berjalan sebagai Modbus RTU slave lewat RS-232/RS-485 (library ModbusSerial). Android tersambung via adapter USB-to-serial + kabel OTG.</p>
+    </div>
+    <div class="panel p-5">
+      <p class="mono text-[13px] mb-2" style="color:var(--copper-soft)">STM32</p>
+      <p class="text-[13.5px] text-[var(--text-mid)] leading-relaxed">Cocok untuk modul I/O industri custom dengan stack Modbus TCP/RTU sendiri (mis. FreeMODBUS), dibaca langsung sebagai register/coil dari HP.</p>
+    </div>
+    <div class="panel p-5">
+      <p class="mono text-[13px] mb-2" style="color:var(--copper-soft)">PLC (Delta, Schneider, LOGO!, dst.)</p>
+      <p class="text-[13.5px] text-[var(--text-mid)] leading-relaxed">Banyak PLC menyediakan Modbus TCP/RTU bawaan atau lewat modul komunikasi tambahan — dibaca sebagai HMI mobile ringan tanpa software SCADA berat.</p>
+    </div>
+  </div>
+
+  <div class="panel p-5 mt-5">
+    <p class="type-badge mb-3 inline-block">Kegunaan umum</p>
+    <div class="grid sm:grid-cols-2 gap-3 text-[13.5px] text-[var(--text-mid)]">
+      <p>• Dashboard monitoring suhu/tekanan/level realtime</p>
+      <p>• Kontrol jarak dekat pompa, motor, katup (coil)</p>
+      <p>• Data logger portabel untuk audit/commissioning</p>
+      <p>• Alat bantu training otomasi & tugas akhir mahasiswa</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= CATATAN & BATASAN ======================= -->
+<section id="catatan" class="wrap py-14 border-t border-[var(--line)]">
+  <h2 class="text-2xl font-semibold mb-5 flex items-center gap-3"><span class="screw"></span>Catatan & Batasan</h2>
+  <div class="panel p-5">
+    <ul class="text-[13.5px] text-[var(--text-mid)] space-y-3 leading-relaxed">
+      <li class="flex gap-2"><span class="dot dot-ro mt-1.5 shrink-0"></span>Alamat register/coil di perangkat lapangan kadang dimulai dari 0 dan kadang dari 1 (tergantung dokumentasi vendor) — sesuaikan <span class="mono">startAddress</span> saat hasil pembacaan tidak sesuai.</li>
+      <li class="flex gap-2"><span class="dot dot-ro mt-1.5 shrink-0"></span>Untuk Modbus RTU, pastikan <span class="mono">baudRate</span>, <span class="mono">dataBits</span>, <span class="mono">stopBits</span>, dan <span class="mono">parity</span> sama persis dengan konfigurasi slave, dan hanya satu adapter USB serial yang didukung dalam satu waktu.</li>
+      <li class="flex gap-2"><span class="dot dot-ro mt-1.5 shrink-0"></span>Naikkan <span class="mono">Pause</span> dan <span class="mono">ResponseTimeout</span> apabila memakai gateway RS-485 yang lambat atau banyak slave dalam satu bus.</li>
+      <li class="flex gap-2"><span class="dot dot-ro mt-1.5 shrink-0"></span>Modbus TCP standar tidak memiliki enkripsi/otentikasi — hindari mengeksposnya langsung ke internet publik tanpa VPN/firewall.</li>
+      <li class="flex gap-2"><span class="dot dot-ro mt-1.5 shrink-0"></span>Selalu tangani event <span class="mono">OperationError</span> dan <span class="mono">WriteCompleted</span> agar aplikasi tidak "diam" saat koneksi putus atau slave tidak merespons.</li>
+      <li class="flex gap-2"><span class="dot dot-ro mt-1.5 shrink-0"></span>Jika <span class="mono">KeepConnection</span> diaktifkan, ingat memanggil <span class="mono">Disconnect()</span> saat Screen ditutup untuk melepas socket/port secara bersih.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================= FOOTER ======================= -->
+<footer class="border-t border-[var(--line)] py-8">
+  <div class="wrap flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+    <p class="text-[12px] text-[var(--text-dim)] mono">ModbusExtension · Non-visible component · MIT App Inventor</p>
+    <a href="https://github.com/" target="_blank" rel="noopener" class="text-[13px] text-[var(--text-mid)] hover:text-[var(--text-hi)] flex items-center gap-1.5">
+      Kontribusi & isu di GitHub →
+    </a>
+  </div>
+</footer>
+
+<script>
+// ---------- Data komponen (properties, events, methods) ----------
+const properties = [
+  {name:"ConnectTimeout", kind:"rw", type:"number", desc:"Batas waktu (milidetik) saat membuka koneksi TCP.", img:"get_ConnectTimeout.png", img2:"set_ConnectTimeout.png"},
+  {name:"IsConnected", kind:"ro", type:"boolean", desc:"Bernilai true setelah ConnectTcp atau ConnectRtu berhasil mengatur koneksi.", img:"get_isConnected.png"},
+  {name:"KeepConnection", kind:"rw", type:"boolean", desc:"Jika true, koneksi (socket TCP / port serial) tetap terbuka di antara permintaan.", img:"get_keepConnection.png", img2:"set_keepConnection.png"},
+  {name:"Pause", kind:"rw", type:"number", desc:"Jeda (milidetik) yang disisipkan sebelum setiap permintaan (berguna untuk gateway RS485 yang lambat).", img:"get_Pause.png", img2:"set_Pause.png"},
+  {name:"ResponseTimeout", kind:"rw", type:"number", desc:"Batas waktu (milidetik) menunggu balasan (response) dari perangkat.", img:"get_ResponseTimeout.png", img2:"set_ResponseTimeout.png"},
+  {name:"SlaveId", kind:"rw", type:"number", desc:"ID slave/unit Modbus (1-247) yang dipakai di setiap permintaan (request).", img:"get_SlaveId.png", img2:"set_SlaveId.png"},
+];
+
+const events = [
+  {name:"Connected", params:[], desc:"Dipicu setelah ConnectTcp/ConnectRtu berhasil mengatur koneksi.", img:"event_Connected.png"},
+  {name:"Disconnected", params:[], desc:"Dipicu setelah Disconnect() dipanggil.", img:"event_Disconnected.png"},
+  {name:"GotBits", params:[["values","list"]], desc:"Dipicu dengan hasil dari ReadCoils/ReadDiscreteInputs: list berisi nilai true/false.", img:"event_GotBits.png"},
+  {name:"GotRegisters", params:[["values","list"]], desc:"Dipicu dengan hasil dari ReadHoldingRegisters/ReadInputRegisters: list berisi angka.", img:"event_GotRegisters.png"},
+  {name:"OperationError", params:[["operation","text"],["message","text"]], desc:"Dipicu setiap kali operasi koneksi, baca, atau tulis mengalami kegagalan.", img:"event_OperationError.png"},
+  {name:"UsbPermissionDenied", params:[], desc:"Dipicu saat pengguna menolak izin akses USB yang diminta oleh RequestUsbPermission.", img:"event_UsbPermissionDenied.png"},
+  {name:"UsbPermissionGranted", params:[["deviceName","text"]], desc:"Dipicu saat pengguna mengizinkan akses USB yang diminta oleh RequestUsbPermission.", img:"event_UsbPermissionGranted.png"},
+  {name:"WriteCompleted", params:[["operation","text"],["success","boolean"],["errorMessage","text"]], desc:"Dipicu setelah fungsi tulis selesai dijalankan, baik berhasil maupun gagal.", img:"event_WriteCompleted.png"},
+];
+
+const methods = [
+  {name:"ConnectRtu", params:[["baudRate","number"],["dataBits","number"],["stopBits","number"],["parity","number"]], returns:null, desc:"Mengatur koneksi Modbus RTU lewat adapter USB serial pertama yang terpasang dan sudah diberi izin. Panggil RequestUsbPermission terlebih dahulu.", img:"method_ConnectRtu.png"},
+  {name:"ConnectTcp", params:[["host","text"],["port","number"]], returns:null, desc:"Mengatur koneksi Modbus TCP ke host dan port yang diberikan (gunakan 502 untuk port Modbus standar).", img:"method_ConnectTcp.png"},
+  {name:"Disconnect", params:[], returns:null, desc:"Menutup koneksi yang sedang aktif (socket TCP atau port serial USB).", img:"method_Disconnect).png"},
+  {name:"ListUsbSerialDevices", params:[], returns:"list", desc:"Menampilkan daftar nama perangkat USB serial yang kompatibel dengan Modbus RTU yang sedang terpasang (CH340, CP210x, FTDI, PL2303, CDC-ACM).", img:"method_ListUsbSerialDevices.png"},
+  {name:"ReadCoils", params:[["startAddress","number"],["count","number"]], returns:null, desc:"Membaca sejumlah 'count' coil (function 0x01) mulai dari 'startAddress'. Hasil lewat event GotBits.", img:"method_ReadCoils.png"},
+  {name:"ReadDiscreteInputs", params:[["startAddress","number"],["count","number"]], returns:null, desc:"Membaca sejumlah 'count' discrete input (function 0x02) mulai dari 'startAddress'. Hasil lewat event GotBits.", img:"method_ReadDiscreteInputs.png"},
+  {name:"ReadHoldingRegisters", params:[["startAddress","number"],["count","number"],["unsigned","boolean"]], returns:null, desc:"Membaca sejumlah 'count' holding register (function 0x03) mulai dari 'startAddress'. Hasil lewat event GotRegisters.", img:"method_ReadHoldingRegisters.png"},
+  {name:"ReadInputRegisters", params:[["startAddress","number"],["count","number"],["unsigned","boolean"]], returns:null, desc:"Membaca sejumlah 'count' input register (function 0x04) mulai dari 'startAddress'. Hasil lewat event GotRegisters.", img:"method_ReadInputRegisters.png"},
+  {name:"RequestUsbPermission", params:[], returns:null, desc:"Meminta izin Android untuk mengakses adapter USB serial pertama yang terpasang. Akan memicu event UsbPermissionGranted atau UsbPermissionDenied.", img:"method_RequestUsbPermission.png"},
+  {name:"WriteCoil", params:[["address","number"],["value","boolean"]], returns:null, desc:"Menulis satu coil (function 0x05).", img:"method_WriteCoil.png"},
+  {name:"WriteCoils", params:[["startAddress","number"],["values","list"]], returns:null, desc:"Menulis beberapa coil sekaligus (function 0x0F) mulai dari 'startAddress'. 'values' berupa list berisi true/false.", img:"method_WriteCoils.png"},
+  {name:"WriteRegister", params:[["address","number"],["value","number"]], returns:null, desc:"Menulis satu holding register (function 0x06). Nilai harus 0-65535.", img:"method_WriteRegister.png"},
+  {name:"WriteRegisters", params:[["startAddress","number"],["values","list"]], returns:null, desc:"Menulis beberapa holding register sekaligus (function 0x10) mulai dari 'startAddress'. 'values' berupa list berisi angka (0-65535).", img:"method_WriteRegisters.png"},
+];
+
+function imgTag(file){
+  return `<img src="images/${file}" alt="${file}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=&quot;block-fallback&quot;>Gambar block tidak ditemukan:<br>images/${file}</div>'">`;
+}
+
+function renderProperties(){
+  const el = document.getElementById('properties-grid');
+  el.innerHTML = properties.map(p => `
+    <div class="panel term-card kind-${p.kind} p-5 nameplate">
+      <div class="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <span class="mono text-[13.5px] font-medium">${p.name}</span>
+        <span class="type-badge">${p.type}</span>
+      </div>
+      <div class="block-frame mb-4">${imgTag(p.img)}${p.img2 ? imgTag(p.img2) : ''}</div>
+      <p class="text-[12.5px] text-[var(--text-mid)] leading-relaxed mb-3">${p.desc}</p>
+      <span class="inline-flex items-center gap-1.5 text-[10.5px] text-[var(--text-dim)]"><span class="dot dot-${p.kind}"></span>${p.kind === 'ro' ? 'read-only' : 'read-write'}</span>
+    </div>`).join('');
+}
+
+function paramList(params){
+  if(!params || !params.length) return `<span class="text-[var(--text-dim)]">tanpa parameter</span>`;
+  return `<div class="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">` +
+    params.map(([n,t]) => `<span class="inline-flex items-center gap-1"><span class="mono">${n}</span><span class="type-badge">${t}</span></span>`).join('') +
+    `</div>`;
+}
+
+function renderEvents(){
+  const el = document.getElementById('events-grid');
+  el.innerHTML = events.map(e => `
+    <div class="panel term-card kind-event p-5 nameplate">
+      <div class="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <span class="mono text-[13.5px] font-medium">${e.name}</span>
+        <span class="dot dot-event"></span>
+      </div>
+      <div class="block-frame mb-4">${imgTag(e.img)}</div>
+      <p class="text-[12.5px] text-[var(--text-mid)] leading-relaxed mb-3">${e.desc}</p>
+      <div class="text-[11px]">${paramList(e.params)}</div>
+    </div>`).join('');
+}
+
+function renderMethods(){
+  const el = document.getElementById('methods-grid');
+  el.innerHTML = methods.map(m => `
+    <div class="panel term-card kind-method p-5 nameplate">
+      <div class="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <span class="mono text-[13.5px] font-medium">${m.name}()</span>
+        <span class="type-badge">${m.returns ? 'returns ' + m.returns : 'void'}</span>
+      </div>
+      <div class="block-frame mb-4">${imgTag(m.img)}</div>
+      <p class="text-[12.5px] text-[var(--text-mid)] leading-relaxed mb-3">${m.desc}</p>
+      <div class="text-[11px]">${paramList(m.params)}</div>
+    </div>`).join('');
+}
+
+renderProperties(); renderEvents(); renderMethods();
+
+// ---------- Tabs ----------
+const grids = { properties: 'properties-grid', events: 'events-grid', methods: 'methods-grid' };
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    Object.values(grids).forEach(id => { document.getElementById(id).style.display = 'none'; });
+    document.getElementById(grids[btn.dataset.tab]).style.display = 'grid';
+  });
+});
+
+hljs.highlightAll();
+</script>
+</body>
+</html>
